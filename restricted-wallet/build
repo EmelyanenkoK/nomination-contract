@@ -1,0 +1,3 @@
+func -SPA ../common-libs/stdlib.fc  \
+          ../common-libs/nonstdlib.fc \
+          wallet.fc -o  ../build/restricted-wallet.fif

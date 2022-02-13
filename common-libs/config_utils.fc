@@ -1,0 +1,30 @@
+(builder) elector_address() inline {
+    var elector = config_param(1).begin_parse().preload_uint(256);
+    return begin_cell()
+           .store_uint(4, 3).store_uint(0xff, 8).store_uint(elector, 256);
+}
+
+int stake_freeze_delay() inline {
+    slice validation_params = config_param(15).begin_parse();
+    int validators_elected_for = validation_params~load_uint(32);
+    validation_params~load_bits(64);
+    int stake_held_for = validation_params~load_uint(32);
+    return  validators_elected_for + stake_held_for;
+}
+
+(int) max_recommended_punishment_for_validator_misbehaviour(int stake) inline {
+    slice recommendation = config_param(40).begin_parse();
+    (int _1,
+     int flat_fine, int prop_fine,
+     int severity_flat_mult, int severity_prop_mult,
+     int _2,
+     int long_flat_mult, int long_prop_mult) =
+         ( recommendation~load_uint(8),
+           recommendation~load_grams(), recommendation~load_uint(32),
+           recommendation~load_uint(16), recommendation~load_uint(16),
+           recommendation~load_uint(16),
+           recommendation~load_uint(16), recommendation~load_uint(16));
+     int suggested_fine = (flat_fine * severity_flat_mult >> 8) * long_flat_mult >> 8;
+     int suggested_fine_part = (prop_fine * severity_prop_mult >> 8) * long_prop_mult >> 8;
+     return min(stake, suggested_fine + muldiv(stake, suggested_fine_part, 1 << 32)); ;; elector-code.fc:L529
+}

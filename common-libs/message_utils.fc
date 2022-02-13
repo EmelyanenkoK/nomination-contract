@@ -1,0 +1,15 @@
+;;Note body_size should be less than 500 (for standard addresses and amounts)
+() send_receipt_message(addr, ans_tag, query_id, body, body_size, coins, mode) impure inline_ref {
+  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
+  var msg = begin_cell()
+    .store_uint(0x18, 6)
+    .store_slice(addr)
+    .store_grams(coins)
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(ans_tag, 32)
+    .store_uint(query_id, 64);
+  if (body >= 0) {
+    msg~store_uint(body, body_size);
+  }
+  send_raw_message(msg.end_cell(), mode);
+}

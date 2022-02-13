@@ -1,0 +1,63 @@
+;; TLB Storage scheme
+;; 
+;; storage#_ 
+;;           seqno:uint32
+;;           subwallet_id:uint32
+;;           controller_pubkey:uint256
+;;           last_used:uint32
+;;           nominator_address:MsgAddress
+;;           controller_reward_share:uint16
+;;           controller_cover_ability:uint16
+;;           nominator_total_balance:Coins nominator_elector_balance:Coins
+;;           nominator_withdrawal_request:Coins total_stake_on_elector:Coins
+;;           last_sent_stake_time:uint32
+;;           = Storage;
+
+([int, int, int, int], [slice, int, int], [int, int, int, int], int) load_data () inline {
+  var ds = get_data().begin_parse();
+  return (
+          tuple4(
+            ds~load_uint(32),
+            ds~load_uint(32),
+            ds~load_uint(256),
+            ds~load_uint(32)
+          ),          
+          triple(
+            ds~load_msg_addr(),
+            ds~load_uint(16),
+            ds~load_uint(16)
+          ),
+          tuple4(
+            ds~load_coins(),
+            ds~load_coins(),
+            ds~load_coins(),
+            ds~load_coins()
+          ),
+          ds.preload_uint(32)
+        );
+}
+
+() save_data ([int, int, int, int] wallet_data,
+              [slice, int, int] static_data,
+              [int, int, int, int] balances,
+              int last_sent_stake_time) impure inline {
+  var (seqno, wallet_id, pub, last_used) = untuple4(wallet_data);
+  builder stb = begin_cell()
+                 .store_uint(seqno, 32)
+                 .store_uint(wallet_id, 32)
+                 .store_uint(pub, 256)
+                 .store_uint(last_used, 32);
+  var (nominator, controller_reward_share, controller_cover_ability) = untriple(static_data);
+  stb = stb.store_slice(nominator)
+           .store_uint(controller_reward_share, 16)
+           .store_uint(controller_cover_ability, 16);
+  ;; nominator_total_balance:Coins nominator_elector_balance:Coins
+  ;; nominator_withdrawal_request:Coins total_stake_on_elector:Coins
+  var (ntb, neb, nwr, tsoe) = untuple4(balances);
+  stb = stb.store_coins(ntb)
+           .store_coins(neb)
+           .store_coins(nwr)
+           .store_coins(tsoe)
+           .store_uint(last_sent_stake_time, 32);
+  set_data(stb.end_cell());
+}

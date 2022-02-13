@@ -1,0 +1,15 @@
+int err::insufficient_fee() asm "401 PUSHINT";
+int err::no_suitable_proxy() asm "402 PUSHINT";
+int err::unprocessed_withdrawal_requests() asm "403 PUSHINT";
+int err::validation_amount_too_high() asm "404 PUSHINT";
+int err::cover_ability_violation() asm "405 PUSHINT";
+
+
+int err::unknown_request() asm "406 PUSHINT";
+int err::unauthorized_request() asm "407 PUSHINT";
+int err::unknown_response() asm "408 PUSHINT";
+int err::malformed_request() asm "409 PUSHINT";
+
+int err::staking_in_process() asm "410 PUSHINT";
+int err::unprocessed_withdrawal() asm "411 PUSHINT";
+int err::system_message_too_expensive() asm "412 PUSHINT";

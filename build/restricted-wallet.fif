@@ -1,0 +1,172 @@
+"Asm.fif" include
+// automatically generated from `../common-libs/stdlib.fc` `../common-libs/nonstdlib.fc` `wallet.fc` 
+PROGRAM{
+  DECLPROC is_elector
+  DECLPROC is_config
+  DECLPROC check_message_destination
+  DECLPROC load_data
+  DECLPROC save_data
+  DECLPROC recv_external
+  DECLPROC recv_internal
+  85143 DECLMETHOD seqno
+  80113 DECLMETHOD wallet_id
+  78748 DECLMETHOD get_public_key
+  is_elector PROC:<{
+    //  a
+    REWRITESTDADDR	//  wc addr
+    1 PUSHINT	//  wc addr _4=1
+    CONFIGOPTPARAM	//  wc addr _5
+    CTOS	//  wc addr _6
+    256 PLDU	//  wc addr _8
+    SWAP	//  wc _8 addr
+    EQUAL	//  wc _9
+    SWAP	//  _9 wc
+    -1 EQINT	//  _9 _11
+    AND	//  _12
+  }>
+  is_config PROC:<{
+    //  a
+    REWRITESTDADDR	//  wc addr
+    0 PUSHINT	//  wc addr _4=0
+    CONFIGOPTPARAM	//  wc addr _5
+    CTOS	//  wc addr _6
+    256 PLDU	//  wc addr _8
+    SWAP	//  wc _8 addr
+    EQUAL	//  wc _9
+    SWAP	//  _9 wc
+    -1 EQINT	//  _9 _11
+    AND	//  _12
+  }>
+  check_message_destination PROCREF:<{
+    //  msg owner
+    SWAP	//  owner msg
+    CTOS	//  owner cs
+    4 LDU	//  owner flags cs
+    SWAP
+    8 PUSHINT	//  owner cs flags _8=8
+    AND	//  owner cs _9
+    IFJMP:<{	//  owner cs
+      2DROP	// 
+      TRUE	//  _10
+    }>	//  owner cs
+    LDMSGADDR	//  owner _27 _26
+    NIP	//  owner cs
+    LDMSGADDR	//  owner _29 _28
+    DROP	//  owner d_addr
+    s0 s1 PUXC	//  d_addr d_addr owner
+    SDEQ	//  d_addr _17
+    OVER	//  d_addr _17 d_addr
+    is_config INLINECALLDICT	//  d_addr _17 _18
+    OR	//  d_addr _19
+    SWAP	//  _19 d_addr
+    is_elector INLINECALLDICT	//  _19 _20
+    OR	//  _21
+    IFJMP:<{	// 
+      -1 PUSHINT	//  _22=-1
+    }>	// 
+    0 PUSHINT	//  _23=0
+  }>
+  load_data PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs
+    32 LDU	//  _4 cs
+    32 LDU	//  _4 _7 cs
+    256 LDU	//  _4 _7 _10 cs
+    LDMSGADDR	//  res res res res cs
+    ENDS
+  }>
+  save_data PROC:<{
+    //  seqno subwallet_id public_key owner
+    s0 s3 XCHG
+    NEWC	//  owner subwallet_id public_key seqno _4
+    32 STI	//  owner subwallet_id public_key _6
+    s1 s2 XCHG	//  owner public_key subwallet_id _6
+    32 STI	//  owner public_key _8
+    256 STU	//  owner _10
+    SWAP	//  _10 owner
+    STSLICER	//  _11
+    ENDC	//  _12
+    c4 POP
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    9 PUSHPOW2	//  in_msg _3=512
+    LDSLICEX	//  signature in_msg
+    DUP	//  signature in_msg cs
+    32 LDU	//  signature in_msg _9 cs
+    32 LDU	//  signature in_msg _9 _12 cs
+    32 LDU	//  signature in_msg subwallet_id valid_until msg_seqno cs
+    36 PUSHINT	//  signature in_msg subwallet_id valid_until msg_seqno cs _18
+    s0 s3 XCHG
+    NOW	//  signature in_msg subwallet_id _18 msg_seqno cs valid_until _19
+    LEQ	//  signature in_msg subwallet_id _18 msg_seqno cs _20
+    s1 s3 XCHG	//  signature in_msg subwallet_id cs msg_seqno _18 _20
+    THROWANYIF
+    load_data CALLDICT	//  signature in_msg subwallet_id cs msg_seqno stored_seqno stored_subwallet public_key owner
+    34 PUSHINT	//  signature in_msg subwallet_id cs msg_seqno stored_seqno stored_subwallet public_key owner _27
+    s5 s4 XCPU	//  signature in_msg subwallet_id cs _27 stored_seqno stored_subwallet public_key owner msg_seqno stored_seqno
+    EQUAL	//  signature in_msg subwallet_id cs _27 stored_seqno stored_subwallet public_key owner _28
+    s1 s5 XCHG	//  signature in_msg subwallet_id cs owner stored_seqno stored_subwallet public_key _27 _28
+    THROWANYIFNOT
+    35 PUSHINT	//  signature in_msg subwallet_id cs owner stored_seqno stored_subwallet public_key _30
+    s6 s2 XCPU	//  signature in_msg _30 cs owner stored_seqno stored_subwallet public_key subwallet_id stored_subwallet
+    EQUAL	//  signature in_msg _30 cs owner stored_seqno stored_subwallet public_key _31
+    s1 s6 XCHG	//  signature in_msg public_key cs owner stored_seqno stored_subwallet _30 _31
+    THROWANYIFNOT
+    31 PUSHINT	//  signature in_msg public_key cs owner stored_seqno stored_subwallet _33
+    s0 s6 XCHG	//  signature _33 public_key cs owner stored_seqno stored_subwallet in_msg
+    HASHSU	//  signature _33 public_key cs owner stored_seqno stored_subwallet _34
+    s0 s7 s5 XC2PU	//  stored_subwallet _33 public_key cs owner stored_seqno _34 signature public_key
+    CHKSIGNU	//  stored_subwallet _33 public_key cs owner stored_seqno _35
+    s1 s5 XCHG	//  stored_subwallet stored_seqno public_key cs owner _33 _35
+    THROWANYIFNOT
+    ACCEPT
+    SWAP	//  stored_subwallet stored_seqno public_key owner cs
+    WHILE:<{
+      DUP	//  stored_subwallet stored_seqno public_key owner cs cs
+      SREFS	//  stored_subwallet stored_seqno public_key owner cs _40
+    }>DO<{	//  stored_subwallet stored_seqno public_key owner cs
+      8 LDU	//  stored_subwallet stored_seqno public_key owner mode cs
+      LDREF	//  stored_subwallet stored_seqno public_key owner mode msg cs
+      s1 s3 PUSH2	//  stored_subwallet stored_seqno public_key owner mode msg cs msg owner
+      check_message_destination INLINECALLDICT	//  stored_subwallet stored_seqno public_key owner mode msg cs _48
+      IF:<{	//  stored_subwallet stored_seqno public_key owner mode msg cs
+        s0 s2 XCHG	//  stored_subwallet stored_seqno public_key owner cs msg mode
+        SENDRAWMSG
+      }>ELSE<{
+        2 1 BLKDROP2	//  stored_subwallet stored_seqno public_key owner cs
+      }>
+    }>	//  stored_subwallet stored_seqno public_key owner cs
+    DROP	//  stored_subwallet stored_seqno public_key owner
+    s0 s2 XCHG	//  stored_subwallet owner public_key stored_seqno
+    INC	//  stored_subwallet owner public_key _51
+    s3 s1 s3 XCHG3	//  _51 stored_subwallet public_key owner
+    save_data CALLDICT
+  }>
+  recv_internal PROC:<{
+    // 
+  }>
+  seqno PROC:<{
+    // 
+    c4 PUSH	//  _0
+    CTOS	//  _1
+    32 PLDU	//  _3
+  }>
+  wallet_id PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  ds
+    32 LDU	//  _9 _8
+    NIP	//  ds
+    32 PLDU	//  _7
+  }>
+  get_public_key PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  ds
+    64 LDU	//  _11 _10
+    NIP	//  ds
+    256 PLDU	//  _9
+  }>
+}END>c

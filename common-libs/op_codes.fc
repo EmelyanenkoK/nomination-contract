@@ -1,0 +1,15 @@
+int op::bounce() asm "0xfffffffe PUSHINT";
+;; elector codes
+int op::elector::request::refund() asm "0x47657424 PUSHINT";
+int op::elector::response::refund() asm "0xf96f7324 PUSHINT";
+int op::elector::request::stake() asm "0x4e73744b PUSHINT";
+int op::elector::response::stake() asm "0xf374484c PUSHINT";
+int op::elector::response::stake::not_accepted() asm "0xee6f454c PUSHINT";
+int op::elector::request::complain_vote() asm "0x56744370 PUSHINT";
+;; int op::elector::refund() asm "0x47657424 PUSHINT";
+
+int op::nominator::add_stake() asm "0xfeedc0de PUSHINT";
+int op::nominator::withdraw() asm "0x0c0010ff PUSHINT";
+int op::nominator::recover_stake() asm "0x47657424 PUSHINT"; ;; == op::validator::recover_stake()
+int op::nominator::notify() asm "0x75706474 PUSHINT";
+int op::nominator::withdrawal() asm "0x77746864 PUSHINT";

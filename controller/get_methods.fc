@@ -1,0 +1,21 @@
+int seqno() method_id {
+  return get_data().begin_parse().preload_uint(32);
+}
+
+int get_subwallet_id() method_id {
+  return get_data().begin_parse().skip_bits(32).preload_uint(32);
+}
+
+int get_public_key() method_id {
+  var cs = get_data().begin_parse().skip_bits(64);
+  return cs.preload_uint(256);
+}
+
+int is_ready_to_stake() method_id {
+  var (wallet_data, static_data, balances, last_sent_stake_time) = load_data();
+  return last_sent_stake_time + stake_freeze_delay() < now();
+}
+
+([int, int, int, int], [slice, int, int], [int, int, int, int], int) all_data () method_id {
+  return load_data();
+}

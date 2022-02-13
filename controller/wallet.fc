@@ -1,0 +1,79 @@
+int is_elector(slice a) inline {
+  (int wc, int addr) = parse_std_addr(a);
+  return (config_param(1).begin_parse().preload_uint(256) == addr) & (wc == -1);
+}
+
+(int, int, int) parse_check_msg(msg) inline_ref {
+  var cs = msg.begin_parse();
+  ;;forbid externals
+  throw_if(38, cs~load_int(1));
+  cs~skip_bits(3);
+  var (s_addr, d_addr) = (cs~load_msg_addr(), cs~load_msg_addr());
+  throw_unless(38, d_addr.preload_uint(3) == 4 );
+  ;; forbid sends to contract itself, we use them internally
+  (int wc, int addr) = parse_std_addr(d_addr);
+  int to_elector? = is_elector(d_addr);
+  var value = cs~load_coins();
+  cs~skip_bits(1 + 4 + 4 + 64 + 32);
+  throw_if(39, cs~load_int(1)); ;; forbid messages with init
+  int either_body = cs~load_int(1);
+  if (either_body) {
+    cs = cs~load_ref().begin_parse();
+  }
+  int op = 0;
+  if (to_elector? | (cs.slice_bits() >= 32)) {
+    op = cs~load_uint(32);
+  }
+  return (op, value, to_elector?);
+}
+
+
+;; General idea is as follows: send all messages to non-elector directly with respect
+;; to funds which belong to nominator. All messages to elector are sent to ourselves
+;; since we want later to resend them with "throw on error flag". That way on sending
+;; message to elector we may immediately increase balance_on_elector variable in storage
+;; knowing that if message won't be send for any reason, storage write will be reverted.
+
+() recv_external (int contract_balance, int msg_value, cell in_msg_cell, slice in_msg) {
+  var signature = in_msg~load_bits(512);
+  var cs = in_msg;
+  var (subwallet_id, valid_until, msg_seqno) = (cs~load_uint(32), cs~load_uint(32), cs~load_uint(32));
+  int n = now();
+  throw_if(36, valid_until <= n);
+  var (wallet_data, static_data, balances, last_sent_stake_time) = load_data();
+  (int stored_seqno, int stored_subwallet, int public_key, int last_used) = untuple4(wallet_data);
+  throw_unless(33, msg_seqno == stored_seqno);
+  throw_unless(34, subwallet_id == stored_subwallet);
+  ;; rate limit to decrease risk of account depletion due to computation fees
+  ;; throw_unless(36, last_used < n - 300);
+  ;; currently we limit wallet usage for low balance, consider removing rate limit completely
+  throw_unless(36, pair_first(get_balance()) > 1000000000);
+  throw_unless(35, check_signature(slice_hash(in_msg), signature, public_key));
+  wallet_data = tuple4(stored_seqno + 1, stored_subwallet, public_key, n);
+  save_data(wallet_data, static_data, balances, last_sent_stake_time);
+  ifnot(cs.slice_bits()) {
+    return accept_message();
+  }
+  int mode = cs~load_uint(8);
+  cell msg = cs~load_ref();
+  (int op, int outgoing_value, int to_elector?) = parse_check_msg(msg);
+  throw_unless(37, outgoing_value + 1000000000 < contract_balance);
+  ifnot (to_elector?) {
+    ;; reserve nominator balance without part already on elector
+    int reserve = balances.t4_first() - balances.t4_second();
+    raw_reserve(reserve, 2);
+    send_raw_message(msg, mode | 2); ;; Do not throw in computation phase
+  } else {
+    var msg = begin_cell()
+                .store_uint(0x10, 6)
+                .store_slice(my_address())
+                .store_grams(1000000000)
+                .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                .store_uint(0x007, 32)
+                ;; no query id since response is not expected
+                .store_ref(msg)
+              .end_cell();
+    send_raw_message(msg, 2);
+  }
+  accept_message();
+}

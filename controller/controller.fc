@@ -1,0 +1,167 @@
+() process_control_request(slice in_msg, 
+                           [[int, int, int, int], [slice, int, int], [int, int, int, int], int] storage) impure {
+    throw_unless(err::malformed_request(), in_msg~load_uint(32) == 0x007);
+    cell msg = in_msg~load_ref();
+    (int op, int outgoing_value, int to_elector?) = parse_check_msg(msg);
+    throw_unless(err::malformed_request(), to_elector?);
+    if (op == op::elector::request::stake()) {
+      var (wallet_data, static_data, balances, last_sent_stake_time) = untuple4(storage);
+      var (nom_total, nom_elector, nom_withdrawal, total_stake) = untuple4(balances);
+      ;; do not send stake too early (we can get change from prev round with it)
+      throw_unless(err::staking_in_process(), last_sent_stake_time + stake_freeze_delay() < now());
+      ;; do not send stakes if previous one is not returned yet
+      throw_unless(err::staking_in_process(), total_stake == 0);
+      ;; do not send stakes if there is unmet withdrawal request
+      throw_unless(err::unprocessed_withdrawal(), nom_withdrawal == 0);
+      int validator_cover_ability = static_data.triple_third();
+      int required_controller_part = max_recommended_punishment_for_validator_misbehaviour(outgoing_value) 
+                            * validator_cover_ability >> 16;
+      throw_unless(err::cover_ability_violation(), 
+                    pair_first(get_balance()) - nom_total >= required_controller_part);
+      total_stake = outgoing_value;
+      nom_elector = min(outgoing_value - required_controller_part, nom_total);
+      balances = tuple4(nom_total, nom_elector, nom_withdrawal, total_stake);
+      send_raw_message(msg, 0);
+      return save_data(wallet_data, static_data, balances, now());
+    }
+    if (op == op::elector::request::refund()) {
+      var (wallet_data, static_data, balances, last_sent_stake_time) = untuple4(storage);
+      throw_unless(err::staking_in_process(), last_sent_stake_time + stake_freeze_delay() < now());
+      throw_unless(err::system_message_too_expensive(), outgoing_value < 2000000000);
+      return send_raw_message(msg, 0);
+    }
+    if (op == op::elector::request::complain_vote()) {
+      throw_unless(err::system_message_too_expensive(), outgoing_value < 2000000000);
+      return send_raw_message(msg, 0);
+    }
+  throw(err::unknown_request());
+}
+
+([int,int,int,int], ()) consider_request([int,int,int,int] balances, slice addr) impure {
+  var (nom_total, nom_elector, nom_withdrawal, total_stake) = untuple4(balances);
+  if(nom_withdrawal > 0) {
+    nom_withdrawal = min(nom_withdrawal, nom_total);
+    nom_total -= nom_withdrawal;
+    send_receipt_message(addr,
+                         op::nominator::withdrawal(),
+                         cur_lt(),
+                         0, 0, nom_withdrawal, 0);
+    balances = tuple4( nom_total, nom_elector, 0, total_stake);
+  }
+  return (balances,());
+}
+
+() process_elector_response(in_msg, msg_value, storage) impure {
+  int op = in_msg~load_uint(32);
+  if( (op == op::elector::response::stake::not_accepted()) | 
+      (op == op::elector::response::refund())) {
+    var (wallet_data, static_data, balances, last_sent_stake_time) = untuple4(storage);
+    var (nom_total, nom_elector, nom_withdrawal, total_stake) = untuple4(balances);
+    int profit = msg_value - total_stake;
+    int initial_nom_total = 0;
+    if (profit >= 0) {
+      int bruto_nominator_profit =  muldiv(profit, nom_elector, total_stake);
+      int controller_reward_share = static_data.triple_second();
+      int netto_nominator_profit = bruto_nominator_profit - 
+                                   (bruto_nominator_profit * controller_reward_share >> 16);
+      nom_total += netto_nominator_profit;
+    } else {
+      if (msg_value > nom_elector) { ;; Validator fully covers fine
+        balances = tuple4( nom_total, 0, nom_withdrawal, 0);
+      } else {
+        int loss = nom_elector - msg_value;
+        nom_total -= loss;
+      }
+    }
+    balances = tuple4( nom_total, 0, nom_withdrawal, 0);
+    if(nom_total & ~(nom_total == initial_nom_total)) {
+      var msg = begin_cell()
+                  .store_uint(0x10, 6)
+                  .store_slice(storage.t4_second().triple_first())
+                  .store_coins(100000000)
+                  .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                  .store_uint(op::nominator::notify(), 32)
+                  .store_uint(cur_lt(), 64)
+                  .store_int(nom_total - initial_nom_total, 64)
+                  .store_coins(nom_total)
+                .end_cell();
+      send_raw_message(msg, 3);
+    }
+    balances~consider_request(static_data.triple_first());
+    ;; drop last_sent_stake_time: thus we can immediately send next stake
+    return save_data(wallet_data, static_data, balances, 0);
+  }
+  ;; we are not interested in other responses
+  return ();
+}
+
+() process_nominator_request (in_msg, msg_value, storage) impure {
+  int op = in_msg~load_uint(32);
+  if(op == op::nominator::add_stake()) {
+    var (wallet_data, static_data, balances, last_sent_stake_time) = untuple4(storage);
+    var (nom_total, nom_elector, nom_withdrawal, total_stake) = untuple4(balances);
+    nom_total += msg_value - 2000000000; ;; 0.2 TON fee
+    balances = tuple4(nom_total, nom_elector, nom_withdrawal, total_stake);
+    send_receipt_message(static_data.triple_first(),
+                         op::nominator::add_stake() | 0x80000000,
+                         in_msg~load_uint(64),
+                         0, 0, 1000000000, 0);
+    return save_data(wallet_data, static_data, balances, last_sent_stake_time);
+  }
+  if(op == op::nominator::withdraw()) {
+    int query_id = in_msg~load_uint(64);
+    var (wallet_data, static_data, balances, last_sent_stake_time) = untuple4(storage);
+    var (nom_total, nom_elector, nom_withdrawal, total_stake) = untuple4(balances);
+    nom_withdrawal += in_msg~load_coins();
+    balances = tuple4(nom_total, nom_elector, nom_withdrawal, total_stake);
+    send_receipt_message(static_data.triple_first(),
+                         op::nominator::withdraw() | 0x80000000,
+                         query_id,
+                         0, 0, 0, 64);
+    ifnot(total_stake) { ;; if tokens are not staked, consider immediately but in different message
+      balances~consider_request(static_data.triple_first());
+    }
+    return save_data(wallet_data, static_data, balances, last_sent_stake_time);
+  }
+  if(op == op::nominator::recover_stake()) {
+      throw_unless(err::staking_in_process(), storage.t4_fourth() + stake_freeze_delay() < now());
+      ;; 1 TON for request; 0.2 for processing;
+      throw_unless(err::insufficient_fee(), msg_value > 1200000000);
+      var msg = begin_cell()
+                  .store_uint(0x10, 6)
+                  .store_builder(elector_address())
+                  .store_coins(1000000000)
+                  .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                  .store_uint(op::elector::request::refund(), 32)
+                  .store_uint(cur_lt(), 64)
+                .end_cell();
+      return send_raw_message(msg, 3);
+  }
+  throw(err::unknown_request());
+}
+
+() recv_internal(int contract_balance, int msg_value, cell in_msg_cell, slice in_msg) {
+  var cs = in_msg_cell.begin_parse();
+  var flags = cs~load_uint(4);  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool
+  slice s_addr = cs~load_msg_addr();
+
+  if (flags & 1) {
+    ;; ignore all bounced messages
+    return ();
+  }
+  ;; storage : [wallet_data, static_data, balances]
+  var storage = tuple4(load_data());
+  int is_control_request? = equal_slices(s_addr, my_address());
+  if ( is_control_request? ) {
+    return process_control_request(in_msg, storage);
+  }
+  int is_elector_response? = is_elector(s_addr);
+  if ( is_elector_response? ) {
+    return process_elector_response(in_msg, msg_value, storage);
+  }
+  int is_nominator_request? = equal_slices(s_addr, storage.t4_second().triple_first());
+  if( is_nominator_request? )   {
+    return process_nominator_request(in_msg, msg_value, storage);
+  }
+  throw(err::unknown_request());
+}

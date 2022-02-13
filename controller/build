@@ -1,0 +1,7 @@
+func -SPA ../common-libs/stdlib.fc  \
+          ../common-libs/nonstdlib.fc \
+          ../common-libs/error_codes.fc \
+          ../common-libs/op_codes.fc \
+          ../common-libs/config_utils.fc \
+          ../common-libs/message_utils.fc \
+          storage.fc wallet.fc controller.fc get_methods.fc -o  ../build/nomination-controller.fif
