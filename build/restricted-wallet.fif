@@ -129,19 +129,17 @@ PROGRAM{
     }>DO<{	//  stored_subwallet stored_seqno public_key owner cs
       8 LDU	//  stored_subwallet stored_seqno public_key owner mode cs
       LDREF	//  stored_subwallet stored_seqno public_key owner mode msg cs
-      s1 s3 PUSH2	//  stored_subwallet stored_seqno public_key owner mode msg cs msg owner
-      check_message_destination INLINECALLDICT	//  stored_subwallet stored_seqno public_key owner mode msg cs _48
-      IF:<{	//  stored_subwallet stored_seqno public_key owner mode msg cs
-        s0 s2 XCHG	//  stored_subwallet stored_seqno public_key owner cs msg mode
-        SENDRAWMSG
-      }>ELSE<{
-        2 1 BLKDROP2	//  stored_subwallet stored_seqno public_key owner cs
-      }>
+      39 PUSHINT	//  stored_subwallet stored_seqno public_key owner mode msg cs _48
+      s2 s4 PUSH2	//  stored_subwallet stored_seqno public_key owner mode msg cs _48 msg owner
+      check_message_destination INLINECALLDICT	//  stored_subwallet stored_seqno public_key owner mode msg cs _48 _49
+      THROWANYIFNOT
+      s0 s2 XCHG	//  stored_subwallet stored_seqno public_key owner cs msg mode
+      SENDRAWMSG
     }>	//  stored_subwallet stored_seqno public_key owner cs
     DROP	//  stored_subwallet stored_seqno public_key owner
     s0 s2 XCHG	//  stored_subwallet owner public_key stored_seqno
-    INC	//  stored_subwallet owner public_key _51
-    s3 s1 s3 XCHG3	//  _51 stored_subwallet public_key owner
+    INC	//  stored_subwallet owner public_key _53
+    s3 s1 s3 XCHG3	//  _53 stored_subwallet public_key owner
     save_data CALLDICT
   }>
   recv_internal PROC:<{

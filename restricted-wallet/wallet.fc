@@ -5,6 +5,7 @@ int err::wrong_signature() asm "31 PUSHINT";
 int err::wrong_seqno() asm "34 PUSHINT";
 int err::wrong_subwallet_id() asm "35 PUSHINT";
 int err::replay_protection() asm "36 PUSHINT";
+int err::wrong_destination() asm "39 PUSHINT";
 
 
 int is_elector(slice a) inline {
@@ -62,17 +63,16 @@ _ save_data(int seqno, int subwallet_id, int public_key, slice owner) impure {
   throw_unless(err::wrong_seqno(), msg_seqno == stored_seqno);
   throw_unless(err::wrong_subwallet_id(), subwallet_id == stored_subwallet);
   throw_unless(err::wrong_signature(), check_signature(slice_hash(in_msg), signature, public_key));
-  accept_message();
   cs~touch();
   while (cs.slice_refs()) {
     var mode = cs~load_uint(8);
     var msg = cs~load_ref();
-    if(check_message_destination(msg, owner)) {
-      send_raw_message(msg, mode);
-    }
+    throw_unless(err::wrong_destination(), check_message_destination(msg, owner));
+    send_raw_message(msg, mode);
   }
 
   save_data(stored_seqno + 1, stored_subwallet, public_key, owner);
+  accept_message();
 }
 
 () recv_internal() impure {
