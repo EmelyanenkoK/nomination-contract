@@ -1,5 +1,5 @@
 # Nomination contract
-Largely based on [https://github.com/EmelyanenkoK/nominator_pool/tree/v2](nominator_pool) this contract is solve isolated simple problem.
+Largely based on [https://github.com/EmelyanenkoK/nominator_pool/tree/v2](https://github.com/EmelyanenkoK/nominator_pool/tree/v2) this contract is solve isolated simple problem.
 
 **Given that we have one validator and nominator create trustless solution when nominator may lend assets to validator and share reward.**
 
