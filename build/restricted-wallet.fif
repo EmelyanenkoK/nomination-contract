@@ -47,24 +47,65 @@ PROGRAM{
     AND	//  owner cs _9
     IFJMP:<{	//  owner cs
       2DROP	// 
-      TRUE	//  _10
+      0 PUSHINT	//  _10=0
     }>	//  owner cs
-    LDMSGADDR	//  owner _27 _26
+    LDMSGADDR	//  owner _67 _66
     NIP	//  owner cs
-    LDMSGADDR	//  owner _29 _28
-    DROP	//  owner d_addr
-    s0 s1 PUXC	//  d_addr d_addr owner
-    SDEQ	//  d_addr _17
-    OVER	//  d_addr _17 d_addr
-    is_config INLINECALLDICT	//  d_addr _17 _18
-    OR	//  d_addr _19
-    SWAP	//  _19 d_addr
-    is_elector INLINECALLDICT	//  _19 _20
-    OR	//  _21
-    IFJMP:<{	// 
-      -1 PUSHINT	//  _22=-1
-    }>	// 
-    0 PUSHINT	//  _23=0
+    LDMSGADDR	//  owner d_addr cs
+    s1 s2 PUXC	//  cs d_addr d_addr owner
+    SDEQ	//  cs d_addr _17
+    IFJMP:<{	//  cs d_addr
+      2DROP	// 
+      -1 PUSHINT	//  _18=-1
+    }>	//  cs d_addr
+    SWAP	//  d_addr cs
+    LDVARUINT16	//  d_addr _71 _70
+    NIP	//  d_addr cs
+    105 PUSHINT	//  d_addr cs _31
+    SDSKIPFIRST	//  d_addr cs
+    1 LDI	//  d_addr _33 cs
+    SWAP	//  d_addr cs _33
+    IFJMP:<{	//  d_addr cs
+      2DROP	// 
+      0 PUSHINT	//  _36=0
+    }>	//  d_addr cs
+    1 LDI	//  d_addr either_body cs
+    SWAP	//  d_addr cs either_body
+    IF:<{	//  d_addr cs
+      LDREF	//  d_addr _77 _76
+      DROP	//  d_addr _41
+      CTOS	//  d_addr cs
+    }>	//  d_addr cs
+    32 LDU	//  d_addr _79 _78
+    DROP	//  d_addr op
+    OVER	//  d_addr op d_addr
+    is_config INLINECALLDICT	//  d_addr op _48
+    IFJMP:<{	//  d_addr op
+      NIP	//  op
+      1450144869 PUSHINT	//  op _49=1450144869
+      EQUAL	//  _50
+    }>	//  d_addr op
+    SWAP	//  op d_addr
+    is_elector INLINECALLDICT	//  op _51
+    IFJMP:<{	//  op
+      DUP
+      1316189259 PUSHINT	//  op op _52=1316189259
+      EQUAL	//  op _53
+      OVER
+      1197831204 PUSHINT	//  op _53 op _54=1197831204
+      EQUAL	//  op _53 _55
+      OR	//  op _56
+      OVER
+      1382499184 PUSHINT	//  op _56 op _57=1382499184
+      EQUAL	//  op _56 _58
+      OR	//  op _59
+      SWAP
+      1450460016 PUSHINT	//  _59 op _60=1450460016
+      EQUAL	//  _59 _61
+      OR	//  _62
+    }>	//  op
+    DROP	// 
+    0 PUSHINT	//  _63=0
   }>
   load_data PROC:<{
     // 
@@ -121,26 +162,28 @@ PROGRAM{
     CHKSIGNU	//  stored_subwallet _33 public_key cs owner stored_seqno _35
     s1 s5 XCHG	//  stored_subwallet stored_seqno public_key cs owner _33 _35
     THROWANYIFNOT
-    ACCEPT
     SWAP	//  stored_subwallet stored_seqno public_key owner cs
     WHILE:<{
       DUP	//  stored_subwallet stored_seqno public_key owner cs cs
-      SREFS	//  stored_subwallet stored_seqno public_key owner cs _40
+      SREFS	//  stored_subwallet stored_seqno public_key owner cs _39
     }>DO<{	//  stored_subwallet stored_seqno public_key owner cs
       8 LDU	//  stored_subwallet stored_seqno public_key owner mode cs
       LDREF	//  stored_subwallet stored_seqno public_key owner mode msg cs
-      39 PUSHINT	//  stored_subwallet stored_seqno public_key owner mode msg cs _48
-      s2 s4 PUSH2	//  stored_subwallet stored_seqno public_key owner mode msg cs _48 msg owner
-      check_message_destination INLINECALLDICT	//  stored_subwallet stored_seqno public_key owner mode msg cs _48 _49
+      39 PUSHINT	//  stored_subwallet stored_seqno public_key owner mode msg cs _47
+      s2 s4 PUSH2	//  stored_subwallet stored_seqno public_key owner mode msg cs _47 msg owner
+      check_message_destination INLINECALLDICT	//  stored_subwallet stored_seqno public_key owner mode msg cs _47 _48
       THROWANYIFNOT
-      s0 s2 XCHG	//  stored_subwallet stored_seqno public_key owner cs msg mode
+      s0 s2 XCHG
+      2 PUSHINT	//  stored_subwallet stored_seqno public_key owner cs msg mode _50=2
+      OR	//  stored_subwallet stored_seqno public_key owner cs msg _51
       SENDRAWMSG
     }>	//  stored_subwallet stored_seqno public_key owner cs
     DROP	//  stored_subwallet stored_seqno public_key owner
     s0 s2 XCHG	//  stored_subwallet owner public_key stored_seqno
-    INC	//  stored_subwallet owner public_key _53
-    s3 s1 s3 XCHG3	//  _53 stored_subwallet public_key owner
+    INC	//  stored_subwallet owner public_key _54
+    s3 s1 s3 XCHG3	//  _54 stored_subwallet public_key owner
     save_data CALLDICT
+    ACCEPT
   }>
   recv_internal PROC:<{
     // 

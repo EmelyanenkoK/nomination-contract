@@ -22,13 +22,29 @@ _ check_message_destination(msg, owner) inline_ref {
   var cs = msg.begin_parse();
   var flags = cs~load_uint(4);
   if (flags & 8) {
-    ;; external messages are always valid
-    return true;
+    ;; external messages are not valid
+    return 0;
   }
   var (s_addr, d_addr) = (cs~load_msg_addr(), cs~load_msg_addr());
 
-  if(equal_slices(d_addr, owner) | is_config(d_addr) | is_elector(d_addr)) {
+  if(equal_slices(d_addr, owner)) {
     return -1;
+  }
+  var value = cs~load_coins();
+  cs~skip_bits(1 + 4 + 4 + 64 + 32);
+  if(cs~load_int(1)) {
+    return 0;
+  }
+  int either_body = cs~load_int(1);
+  if (either_body) {
+    cs = cs~load_ref().begin_parse();
+  }
+  int op = cs~load_uint(32);
+  if(is_config(d_addr)) {
+    return op == 0x566f7465;
+  }
+  if(is_elector(d_addr)) {
+    return (op == 0x4e73744b) | (op == 0x47657424) | (op == 0x52674370) | ( op == 0x56744370);
   }
   return 0;
 }
@@ -68,7 +84,8 @@ _ save_data(int seqno, int subwallet_id, int public_key, slice owner) impure {
     var mode = cs~load_uint(8);
     var msg = cs~load_ref();
     throw_unless(err::wrong_destination(), check_message_destination(msg, owner));
-    send_raw_message(msg, mode);
+    ;; Allways ignore errors to prevent replay errors
+    send_raw_message(msg, mode | 2);
   }
 
   save_data(stored_seqno + 1, stored_subwallet, public_key, owner);
