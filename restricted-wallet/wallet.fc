@@ -85,7 +85,8 @@ _ save_data(int seqno, int subwallet_id, int public_key, slice owner) impure {
     var msg = cs~load_ref();
     throw_unless(err::wrong_destination(), check_message_destination(msg, owner));
     ;; Allways ignore errors to prevent replay errors
-    send_raw_message(msg, mode | 2);
+    ;; Forbid contract destruction
+    send_raw_message(msg, (mode | 2) & 195);
   }
 
   save_data(stored_seqno + 1, stored_subwallet, public_key, owner);
