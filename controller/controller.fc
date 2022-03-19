@@ -105,7 +105,7 @@
     send_receipt_message(static_data.triple_first(),
                          op::nominator::add_stake() | 0x80000000,
                          in_msg~load_uint(64),
-                         0, 0, 1000000000, 0);
+                         nom_total, 128, 100000000, 0);
     return save_data(wallet_data, static_data, balances, last_sent_stake_time);
   }
   if(op == op::nominator::withdraw()) {
