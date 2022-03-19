@@ -1,0 +1,3 @@
+int workchain() asm "0 PUSHINT";
+
+int profit_pool::storage_reserver() asm "1000000000 PUSHINT";

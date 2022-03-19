@@ -13,3 +13,12 @@ int op::nominator::withdraw() asm "0x0c0010ff PUSHINT";
 int op::nominator::recover_stake() asm "0x47657424 PUSHINT"; ;; == op::validator::recover_stake()
 int op::nominator::notify() asm "0x75706474 PUSHINT";
 int op::nominator::withdrawal() asm "0x77746864 PUSHINT";
+
+int op::profit_pool::deposit() asm "0 PUSHINT"; ;;TODO
+
+int op::minter::mint() asm "0 PUSHINT"; ;;TODO
+int op::minter::distribute() asm "0 PUSHINT"; ;;TODO
+
+
+int op::jetton::master_request() asm "0 PUSHINT"; ;;TODO
+int op::jetton::burn_notification() asm "18 PUSHINT"; ;;TODO

@@ -1,0 +1,9 @@
+func -SPA ../common-libs/stdlib.fc  \
+          ../common-libs/nonstdlib.fc \
+          ../common-libs/error_codes.fc \
+          ../common-libs/op_codes.fc \
+          ../common-libs/config_utils.fc \
+          ../common-libs/message_utils.fc \
+          fees.fc \
+          params.fc \
+          profit_pool.fc -o  ../build/profit_pool.fif
