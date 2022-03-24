@@ -46,16 +46,20 @@
 {-
   TL-B storage
   storage#_ staked_tons:Coins
-            pj_supply:Coins unconverted_tons:Coins unconverted_pjs:Coins current_round:#
+            pj_supply:Coins
+            unconverted_tons:Coins unconverted_pjs:Coins unwithdrawn_tons:Coins
+            current_round:#
             profit_source:MsgAddressInt 
             content:^Cell token_wallet_code:^Cell minter_code:^Cell
   staked_tons - total number of tons currently staked on validator-controller
   pj_supply - total number of issued PJs
   unconverted_tons - number of deposited TONs in that round. Upon round end
-                     pool need to calculate amount of TONs which should be 
-                     sent to awTON minter
-  unconverted_pjs - number of burned PJs in that round. Upon round end pool need to
-               calculate amount of TONs which should be sent to awTON minter
+                     pool need to calculate amount of PJs which should be 
+                     sent to awPJ minter
+  unconverted_pjs -  number of burned PJs in that round. Upon round end pool need to
+                     calculate amount of TONs which should be sent to awTON minter
+  unwithdrawn_tons - number of TONs received from profit_source but not yet sent
+                     to awTON minter
   current_round - index of current round, we need it to know to which awPJ/awTON
                   minter send the PJ/TONs
   Profit source - is address of validator-controller.
@@ -68,6 +72,7 @@ global int staked_tons;
 global int pj_supply;
 global int unconverted_tons;
 global int unconverted_pjs;
+global int unwithdrawn_tons;
 global int current_round;
 global slice profit_source;
 global cell content;
@@ -82,6 +87,7 @@ global slice static_storage_data;
   pj_supply = ds~load_coins();
   unconverted_tons = ds~load_coins();
   unconverted_pjs = ds~load_coins();
+  unwithdrawn_tons = ds~load_coins();
   current_round = ds~load_uint(32);
   static_storage_data = ds;
   profit_source = ds~load_msg_addr();
@@ -96,6 +102,7 @@ global slice static_storage_data;
             .store_coins(pj_supply)
             .store_coins(unconverted_tons)
             .store_coins(unconverted_pjs)
+            .store_coins(unwithdrawn_tons)
             .store_coins(current_round)
             .store_slice(static_storage_data)
            .end_cell()
@@ -146,26 +153,26 @@ int pj_per_nanoton () inline {
   unconverted_pjs += token_amount;
 }
 
-() deposit_TONs_to_minter (int ton_amount, int round_id) impure {
+() activate_TONs_distribution (int ton_amount, int round_id) impure {
   slice addr_none = begin_cell().store_uint(0,2).end_cell().begin_parse();
   cell state_init = calculate_minter_state_init(my_address(), round_id, addr_none, minter_code);
   slice minter_address = calc_address(minter_init_state);
   var msg = begin_cell()
     .store_uint(0x18, 6)
     .store_slice(minter_address)
-    .store_coins(ton_amount + profit_pool::minter_storage_fee())
+    .store_coins(ton_amount)
     .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
     .store_uint(op::minter::distribute(), 32)
     .store_uint(cur_lt(), 64);
-  send_raw_message(msg.end_cell(), 1);
+  send_raw_message(msg.end_cell(), 0);
 }
 
-() deposit_PJ_to_minter (int pj_amount, int round_id) impure {
+() activate_PJs_distribution (int pj_amount, int round_id) impure {
   cell state_init = calculate_minter_state_init(my_address(), round_id, my_address(), minter_code);
   slice minter_address = calc_address(minter_init_state);
 
   ;; Now we mint PJ tokens to awPJ minter and notify it
-
+  pj_supply += pj_amount;
   cell wallet_state_init = calculate_token_state_init(minter_address, my_address(), token_wallet_code);
   slice to_wallet_address = calc_address(wallet_state_init);
   var msg = begin_cell()
@@ -207,6 +214,22 @@ int pj_per_nanoton () inline {
   staked_tons += pair_first(get_balance()) - profit_pool::storage_reserver();
 }
 
+() request_withdrawal_from_validator_controller (int amount) impure {
+  ;; NOTE here we may add some complex logic to not sending small deposits
+  ;; instead accruing them till they become big to decrease fees expenses
+  ;; however this will require more complex logic which takes into account
+  ;; TONs on balance for pj_per_nanoton calculation
+  raw_reserve(profit_pool::storage_reserver(), 2);
+  var msg = begin_cell()
+    .store_uint(0x18, 6)
+    .store_slice(profit_source)
+    .store_coins(0)
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(op::nominator::withdraw(), 32)
+    .store_uint(cur_lt(), 64);
+  send_raw_message(msg.end_cell(), 128);
+}
+
 () recv_internal (int msg_value, cell in_msg_full, slice in_msg_body) {
     if (in_msg_body.slice_empty?()) { ;; ignore empty messages
         return ();
@@ -240,6 +263,9 @@ int pj_per_nanoton () inline {
             equal_slices(calc_user_wallet(from_address, my_address(), token_wallet_code), sender_address)
       );
       mint_awTONs(from_address, token_amount, query_id, current_round, unconverted_pjs == 0);
+      ;; we request a little bit more, to acknowledge that pr_per_nanoton may
+      ;; grow on the round end
+      request_withdrawal_from_validator_controller(muldiv(pj_per_nanoton() * token_amount, 102, 100));
     }
     if (op == op::nominator::notify()) {
       throw_unless(707, equal_slices(profit_source, sender_address));
@@ -250,18 +276,19 @@ int pj_per_nanoton () inline {
       staked_tons = in_msg_body~load_coins();
       int price = pj_per_nanoton();
       if(unconverted_pjs) {
-        deposit_TONs_to_minter(unconverted_pjs / price, current_round);
+        pj_supply -= unconverted_pjs;
+        activate_TONs_distribution(unwithdrawn_tons, current_round);
         unconverted_pjs = 0;
       }
       if(unconverted_tons) {
-        deposit_PJ_to_minter(unconverted_tons * price, current_round);
+        activate_PJs_distribution(unconverted_tons * price, current_round);
         unconverted_tons = 0;
       }
       current_round += 1;
     }
-    if (op == (op::nominator::add_stake() | 0x80000000) ) {
+    if (op == op::nominator::withdrawal()) {
       throw_unless(707, equal_slices(profit_source, sender_address));
-      staked_tons = in_msg_body~load_uint(128);
+      unwithdrawn_tons += msg_value - profit_pool::basic_processing_fee();
     }
     if (op == op::elector::request::refund()) {
       ;; request validator-controller to request refund from elector

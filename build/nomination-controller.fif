@@ -12,6 +12,7 @@ PROGRAM{
   DECLPROC recv_external
   DECLPROC process_control_request
   DECLPROC consider_request
+  DECLPROC notify_nominator
   DECLPROC process_elector_response
   DECLPROC process_nominator_request
   DECLPROC recv_internal
@@ -458,10 +459,38 @@ PROGRAM{
       5 BLKDROP	//  balances
     }>
   }>
+  notify_nominator PROC:<{
+    //  nom_total_diff nom_total storage
+    LTIME	//  nom_total_diff nom_total storage _4
+    0x75706474 PUSHINT	//  nom_total_diff nom_total storage _4 _5
+    0 PUSHINT	//  nom_total_diff nom_total storage _4 _5 _6=0
+    16 PUSHINT	//  nom_total_diff nom_total storage _4 _5 _6=0 _7=16
+    NEWC	//  nom_total_diff nom_total storage _4 _5 _6=0 _7=16 _8
+    6 STU	//  nom_total_diff nom_total storage _4 _5 _6=0 _10
+    s0 s4 XCHG	//  nom_total_diff nom_total _10 _4 _5 _6=0 storage
+    SECOND	//  nom_total_diff nom_total _10 _4 _5 _6=0 _11
+    FIRST	//  nom_total_diff nom_total _10 _4 _5 _6=0 _12
+    s1 s4 XCHG	//  nom_total_diff nom_total _6=0 _4 _5 _10 _12
+    STSLICER	//  nom_total_diff nom_total _6=0 _4 _5 _13
+    100000000 PUSHINT	//  nom_total_diff nom_total _6=0 _4 _5 _13 _14=100000000
+    STVARUINT16	//  nom_total_diff nom_total _6=0 _4 _5 _15
+    s1 s3 XCHG	//  nom_total_diff nom_total _5 _4 _6=0 _15
+    107 STU	//  nom_total_diff nom_total _5 _4 _29
+    s1 s2 XCHG	//  nom_total_diff nom_total _4 _5 _29
+    32 STU	//  nom_total_diff nom_total _4 _31
+    64 STU	//  nom_total_diff nom_total _33
+    s1 s2 XCHG	//  nom_total nom_total_diff _33
+    64 STI	//  nom_total _35
+    SWAP	//  _35 nom_total
+    STVARUINT16	//  _36
+    ENDC	//  msg
+    3 PUSHINT	//  msg _38=3
+    SENDRAWMSG
+  }>
   process_elector_response PROC:<{
     //  in_msg msg_value storage
     s0 s2 XCHG	//  storage msg_value in_msg
-    32 LDU	//  storage msg_value _95 _94
+    32 LDU	//  storage msg_value _56 _55
     DROP	//  storage msg_value op
     0xee6f454c PUSHINT	//  storage msg_value op _7
     s1 s(-1) PUXC	//  storage msg_value op op _7
@@ -472,7 +501,7 @@ PROGRAM{
     OR	//  storage msg_value _11
     IFJMP:<{	//  storage msg_value
       OVER	//  storage msg_value storage
-      4 UNTUPLE	//  storage msg_value _96 _97 _98 _99
+      4 UNTUPLE	//  storage msg_value _57 _58 _59 _60
       DROP	//  storage msg_value wallet_data static_data balances
       4 UNTUPLE	//  storage msg_value wallet_data static_data nom_total nom_elector nom_withdrawal total_stake
       s6 s0 PUSH2	//  storage msg_value wallet_data static_data nom_total nom_elector nom_withdrawal total_stake msg_value total_stake
@@ -507,50 +536,19 @@ PROGRAM{
       s0 s1 PUSH2
       s6 s6 XCHG2	//  storage nom_total wallet_data static_data nom_total _45=0 nom_withdrawal _46=0
       4 TUPLE	//  storage nom_total wallet_data static_data balances
+      OVER	//  storage nom_total wallet_data static_data balances static_data
+      FIRST	//  storage nom_total wallet_data static_data balances _49
+      consider_request CALLDICT	//  storage nom_total wallet_data static_data balances
       s3 PUSH	//  storage nom_total wallet_data static_data balances nom_total
-      0 EQINT	//  storage nom_total wallet_data static_data balances _48
-      NOT	//  storage nom_total wallet_data static_data balances _49
-      s4 s(-1) PUXC	//  storage nom_total wallet_data static_data balances nom_total _49
-      AND	//  storage nom_total wallet_data static_data balances _50
       IF:<{	//  storage nom_total wallet_data static_data balances
-        s3 PUSH	//  storage nom_total wallet_data static_data balances _52
-        LTIME	//  storage nom_total wallet_data static_data balances _52 _53
-        0x75706474 PUSHINT	//  storage nom_total wallet_data static_data balances _52 _53 _54
-        0 PUSHINT	//  storage nom_total wallet_data static_data balances _52 _53 _54 _55=0
-        16 PUSHINT	//  storage nom_total wallet_data static_data balances _52 _53 _54 _55=0 _56=16
-        NEWC	//  storage nom_total wallet_data static_data balances _52 _53 _54 _55=0 _56=16 _57
-        6 STU	//  storage nom_total wallet_data static_data balances _52 _53 _54 _55=0 _59
-        s0 s9 XCHG	//  _59 nom_total wallet_data static_data balances _52 _53 _54 _55=0 storage
-        SECOND	//  _59 nom_total wallet_data static_data balances _52 _53 _54 _55=0 _60
-        FIRST	//  _59 nom_total wallet_data static_data balances _52 _53 _54 _55=0 _61
-        s1 s9 XCHG	//  _55=0 nom_total wallet_data static_data balances _52 _53 _54 _59 _61
-        STSLICER	//  _55=0 nom_total wallet_data static_data balances _52 _53 _54 _62
-        100000000 PUSHINT	//  _55=0 nom_total wallet_data static_data balances _52 _53 _54 _62 _63=100000000
-        STVARUINT16	//  _55=0 nom_total wallet_data static_data balances _52 _53 _54 _64
-        s1 s8 XCHG	//  _54 nom_total wallet_data static_data balances _52 _53 _55=0 _64
-        107 STU	//  _54 nom_total wallet_data static_data balances _52 _53 _78
-        s1 s7 XCHG	//  _53 nom_total wallet_data static_data balances _52 _54 _78
-        32 STU	//  _53 nom_total wallet_data static_data balances _52 _80
-        s1 s6 XCHG	//  _52 nom_total wallet_data static_data balances _53 _80
-        64 STU	//  _52 nom_total wallet_data static_data balances _82
-        s1 s5 XCHG	//  balances nom_total wallet_data static_data _52 _82
-        64 STI	//  balances nom_total wallet_data static_data _84
-        s0 s3 XCHG2	//  balances static_data wallet_data _84 nom_total
-        STVARUINT16	//  balances static_data wallet_data _85
-        ENDC	//  balances static_data wallet_data msg
-        3 PUSHINT	//  balances static_data wallet_data msg _87=3
-        SENDRAWMSG
-        s1 s2 XCHG	//  static_data balances wallet_data
+        s3 s3 s4 PUXC2	//  static_data balances wallet_data _51 nom_total storage
+        notify_nominator CALLDICT
       }>ELSE<{
         s3 POP
         s3 POP	//  static_data balances wallet_data
       }>
-      s2 PUSH	//  static_data balances wallet_data static_data
-      FIRST	//  static_data balances wallet_data _90
-      s1 s2 XCHG	//  static_data wallet_data balances _90
-      consider_request CALLDICT	//  static_data wallet_data balances
-      s1 s2 XCHG
-      0 PUSHINT	//  wallet_data static_data balances _92=0
+      -ROT
+      0 PUSHINT	//  wallet_data static_data balances _53=0
       save_data INLINECALLDICT
     }>	//  storage msg_value
     2DROP	// 
@@ -564,112 +562,129 @@ PROGRAM{
     EQUAL	//  storage msg_value op in_msg _8
     IFJMP:<{	//  storage msg_value op in_msg
       NIP	//  storage msg_value in_msg
-      s0 s2 XCHG	//  in_msg msg_value storage
-      4 UNTUPLE	//  in_msg msg_value wallet_data static_data balances last_sent_stake_time
-      SWAP	//  in_msg msg_value wallet_data static_data last_sent_stake_time balances
-      4 UNTUPLE	//  in_msg msg_value wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal total_stake
-      s0 s7 XCHG
-      2000000000 PUSHINT	//  in_msg total_stake wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal msg_value _19=2000000000
-      SUB	//  in_msg total_stake wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal _20
-      s1 s3 XCHG	//  in_msg total_stake wallet_data static_data last_sent_stake_time nom_withdrawal nom_elector nom_total _20
-      ADD	//  in_msg total_stake wallet_data static_data last_sent_stake_time nom_withdrawal nom_elector nom_total
-      s0 s3 XCHG
-      s2 s6 XCHG2	//  in_msg last_sent_stake_time wallet_data static_data nom_total nom_elector nom_withdrawal total_stake
-      4 TUPLE	//  in_msg last_sent_stake_time wallet_data static_data balances
-      OVER	//  in_msg last_sent_stake_time wallet_data static_data balances static_data
-      FIRST	//  in_msg last_sent_stake_time wallet_data static_data balances _23
-      0xfeedc0de PUSHINT	//  in_msg last_sent_stake_time wallet_data static_data balances _23 _24
-      31 PUSHPOW2	//  in_msg last_sent_stake_time wallet_data static_data balances _23 _24 _25=2147483648
-      OR	//  in_msg last_sent_stake_time wallet_data static_data balances _23 _26
-      s0 s6 XCHG	//  _26 last_sent_stake_time wallet_data static_data balances _23 in_msg
-      64 LDU	//  _26 last_sent_stake_time wallet_data static_data balances _23 _128 _127
-      DROP	//  _26 last_sent_stake_time wallet_data static_data balances _23 _27
-      0 PUSHINT	//  _26 last_sent_stake_time wallet_data static_data balances _23 _27 _30=0
-      DUP	//  _26 last_sent_stake_time wallet_data static_data balances _23 _27 _30=0 _31=0
-      1000000000 PUSHINT	//  _26 last_sent_stake_time wallet_data static_data balances _23 _27 _30=0 _31=0 _32=1000000000
-      OVER	//  _26 last_sent_stake_time wallet_data static_data balances _23 _27 _30=0 _31=0 _32=1000000000 _33=0
+      s2 PUSH	//  storage msg_value in_msg storage
+      4 UNTUPLE	//  storage msg_value in_msg wallet_data static_data balances last_sent_stake_time
+      SWAP	//  storage msg_value in_msg wallet_data static_data last_sent_stake_time balances
+      4 UNTUPLE	//  storage msg_value in_msg wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal total_stake
+      s0 s8 XCHG
+      2000000000 PUSHINT	//  storage total_stake in_msg wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal msg_value _19=2000000000
+      SUB	//  storage total_stake in_msg wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal _20
+      s1 s3 XCHG	//  storage total_stake in_msg wallet_data static_data last_sent_stake_time nom_withdrawal nom_elector nom_total _20
+      ADD	//  storage total_stake in_msg wallet_data static_data last_sent_stake_time nom_withdrawal nom_elector nom_total
+      TUCK
+      s3 s8 XCPU	//  storage total_stake in_msg wallet_data static_data last_sent_stake_time nom_total nom_total nom_elector nom_withdrawal total_stake
+      4 TUPLE	//  storage total_stake in_msg wallet_data static_data last_sent_stake_time nom_total balances
+      s3 PUSH	//  storage total_stake in_msg wallet_data static_data last_sent_stake_time nom_total balances static_data
+      FIRST	//  storage total_stake in_msg wallet_data static_data last_sent_stake_time nom_total balances _23
+      0xfeedc0de PUSHINT	//  storage total_stake in_msg wallet_data static_data last_sent_stake_time nom_total balances _23 _24
+      31 PUSHPOW2	//  storage total_stake in_msg wallet_data static_data last_sent_stake_time nom_total balances _23 _24 _25=2147483648
+      OR	//  storage total_stake in_msg wallet_data static_data last_sent_stake_time nom_total balances _23 _26
+      s0 s7 XCHG	//  storage total_stake _26 wallet_data static_data last_sent_stake_time nom_total balances _23 in_msg
+      64 LDU	//  storage total_stake _26 wallet_data static_data last_sent_stake_time nom_total balances _23 _132 _131
+      DROP	//  storage total_stake _26 wallet_data static_data last_sent_stake_time nom_total balances _23 _27
+      0 PUSHINT	//  storage total_stake _26 wallet_data static_data last_sent_stake_time nom_total balances _23 _27 _30=0
+      DUP	//  storage total_stake _26 wallet_data static_data last_sent_stake_time nom_total balances _23 _27 _30=0 _31=0
+      100000000 PUSHINT	//  storage total_stake _26 wallet_data static_data last_sent_stake_time nom_total balances _23 _27 _30=0 _31=0 _32=100000000
+      OVER	//  storage total_stake _26 wallet_data static_data last_sent_stake_time nom_total balances _23 _27 _30=0 _31=0 _32=100000000 _33=0
       s5 s6 XCHG
-      s5 s10 XCHG	//  balances last_sent_stake_time wallet_data static_data _23 _26 _27 _30=0 _31=0 _32=1000000000 _33=0
+      s5 s11 XCHG	//  storage total_stake balances wallet_data static_data last_sent_stake_time nom_total _23 _26 _27 _30=0 _31=0 _32=100000000 _33=0
       send_receipt_message INLINECALLDICT
-      2SWAP	//  wallet_data static_data balances last_sent_stake_time
+      s0 s5 XCHG	//  storage nom_total balances wallet_data static_data last_sent_stake_time total_stake
+      IFNOT:<{	//  storage nom_total balances wallet_data static_data last_sent_stake_time
+        0 PUSHINT	//  storage nom_total balances wallet_data static_data last_sent_stake_time _35=0
+        s0 s5 s6 XCHG3	//  static_data last_sent_stake_time balances wallet_data _35=0 nom_total storage
+        notify_nominator CALLDICT
+      }>ELSE<{
+        s4 POP
+        s4 POP	//  static_data last_sent_stake_time balances wallet_data
+      }>
+      s3 s1 s3 XCHG3	//  wallet_data static_data balances last_sent_stake_time
       save_data INLINECALLDICT
     }>	//  storage msg_value op in_msg
-    0x0c0010ff PUSHINT	//  storage msg_value op in_msg _36
-    s2 s(-1) PUXC	//  storage msg_value op in_msg op _36
-    EQUAL	//  storage msg_value op in_msg _37
+    0x0c0010ff PUSHINT	//  storage msg_value op in_msg _38
+    s2 s(-1) PUXC	//  storage msg_value op in_msg op _38
+    EQUAL	//  storage msg_value op in_msg _39
     IFJMP:<{	//  storage msg_value op in_msg
       2 1 BLKDROP2	//  storage in_msg
       64 LDU	//  storage query_id in_msg
-      s0 s2 XCHG	//  in_msg query_id storage
-      4 UNTUPLE	//  in_msg query_id wallet_data static_data balances last_sent_stake_time
-      SWAP	//  in_msg query_id wallet_data static_data last_sent_stake_time balances
-      4 UNTUPLE	//  in_msg query_id wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal total_stake
-      s0 s8 XCHG	//  total_stake query_id wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal in_msg
-      LDVARUINT16	//  total_stake query_id wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal _140 _139
-      DROP	//  total_stake query_id wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal _52
-      ADD	//  total_stake query_id wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal
-      s7 PUSH	//  total_stake query_id wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal total_stake
-      4 TUPLE	//  total_stake query_id wallet_data static_data last_sent_stake_time balances
-      s2 PUSH	//  total_stake query_id wallet_data static_data last_sent_stake_time balances static_data
-      FIRST	//  total_stake query_id wallet_data static_data last_sent_stake_time balances _56
-      0x0c0010ff PUSHINT	//  total_stake query_id wallet_data static_data last_sent_stake_time balances _56 _57
-      31 PUSHPOW2	//  total_stake query_id wallet_data static_data last_sent_stake_time balances _56 _57 _58=2147483648
-      OR	//  total_stake query_id wallet_data static_data last_sent_stake_time balances _56 _59
-      0 PUSHINT	//  total_stake query_id wallet_data static_data last_sent_stake_time balances _56 _59 _60=0
-      s0 s0 PUSH2	//  total_stake query_id wallet_data static_data last_sent_stake_time balances _56 _59 _60=0 _61=0 _62=0
+      s2 PUSH	//  storage query_id in_msg storage
+      4 UNTUPLE	//  storage query_id in_msg wallet_data static_data balances last_sent_stake_time
+      SWAP	//  storage query_id in_msg wallet_data static_data last_sent_stake_time balances
+      4 UNTUPLE	//  storage query_id in_msg wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal total_stake
+      s0 s7 XCHG	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal in_msg
+      LDVARUINT16	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal _144 _143
+      DROP	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal _54
+      ADD	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total nom_elector nom_withdrawal
+      s2 PUSH
+      -ROT
+      s7 PUSH	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total nom_total nom_elector nom_withdrawal total_stake
+      4 TUPLE	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total balances
+      s3 PUSH	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total balances static_data
+      FIRST	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total balances _58
+      0x0c0010ff PUSHINT	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total balances _58 _59
+      31 PUSHPOW2	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total balances _58 _59 _60=2147483648
+      OR	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total balances _58 _61
+      0 PUSHINT	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total balances _58 _61 _62=0
+      s0 s0 PUSH2	//  storage query_id total_stake wallet_data static_data last_sent_stake_time nom_total balances _58 _61 _62=0 _63=0 _64=0
       s4 s5 XCHG
       s3 s4 XCHG
-      s3 s9 XCHG
-      64 PUSHINT	//  total_stake balances wallet_data static_data last_sent_stake_time _56 _59 query_id _60=0 _61=0 _62=0 _63=64
+      s3 s11 XCHG
+      64 PUSHINT	//  storage balances total_stake wallet_data static_data last_sent_stake_time nom_total _58 _61 query_id _62=0 _63=0 _64=0 _65=64
       send_receipt_message INLINECALLDICT
-      s0 s4 XCHG	//  last_sent_stake_time balances wallet_data static_data total_stake
-      IFNOT:<{	//  last_sent_stake_time balances wallet_data static_data
-        DUP	//  last_sent_stake_time balances wallet_data static_data static_data
-        FIRST	//  last_sent_stake_time balances wallet_data static_data _66
-        s1 s3 XCHG	//  last_sent_stake_time static_data wallet_data balances _66
-        consider_request CALLDICT	//  last_sent_stake_time static_data wallet_data balances
-        s0 s2 XCHG	//  last_sent_stake_time balances wallet_data static_data
-      }>	//  last_sent_stake_time balances wallet_data static_data
-      s0 s0 s3 XCHG3	//  wallet_data static_data balances last_sent_stake_time
+      s0 s4 XCHG	//  storage balances nom_total wallet_data static_data last_sent_stake_time total_stake
+      IFNOT:<{	//  storage balances nom_total wallet_data static_data last_sent_stake_time
+        OVER	//  storage balances nom_total wallet_data static_data last_sent_stake_time static_data
+        FIRST	//  storage balances nom_total wallet_data static_data last_sent_stake_time _68
+        s1 s5 XCHG	//  storage last_sent_stake_time nom_total wallet_data static_data balances _68
+        consider_request CALLDICT	//  storage last_sent_stake_time nom_total wallet_data static_data balances
+        0 PUSHINT	//  storage last_sent_stake_time nom_total wallet_data static_data balances _70=0
+        s0 s4 s6 XCHG3	//  static_data last_sent_stake_time balances wallet_data _70=0 nom_total storage
+        notify_nominator CALLDICT
+        s1 s2 XCHG	//  static_data balances last_sent_stake_time wallet_data
+      }>ELSE<{
+        s3 POP
+        s4 POP	//  static_data balances last_sent_stake_time wallet_data
+      }>
+      3 -ROLL	//  wallet_data static_data balances last_sent_stake_time
       save_data INLINECALLDICT
     }>	//  storage msg_value op in_msg
     DROP	//  storage msg_value op
-    0x47657424 PUSHINT	//  storage msg_value op _69
-    EQUAL	//  storage msg_value _70
+    0x47657424 PUSHINT	//  storage msg_value op _73
+    EQUAL	//  storage msg_value _74
     IFJMP:<{	//  storage msg_value
-      410 PUSHINT	//  storage msg_value _71
-      s0 s2 XCHG	//  _71 msg_value storage
-      3 INDEX	//  _71 msg_value _72
-      stake_freeze_delay INLINECALLDICT	//  _71 msg_value _72 _73
-      ADD	//  _71 msg_value _74
-      NOW	//  _71 msg_value _74 _75
-      LESS	//  _71 msg_value _76
-      s1 s2 XCHG	//  msg_value _71 _76
+      410 PUSHINT	//  storage msg_value _75
+      s0 s2 XCHG	//  _75 msg_value storage
+      3 INDEX	//  _75 msg_value _76
+      stake_freeze_delay INLINECALLDICT	//  _75 msg_value _76 _77
+      ADD	//  _75 msg_value _78
+      NOW	//  _75 msg_value _78 _79
+      LESS	//  _75 msg_value _80
+      s1 s2 XCHG	//  msg_value _75 _80
       THROWANYIFNOT
-      401 PUSHINT	//  msg_value _78
+      401 PUSHINT	//  msg_value _82
       SWAP
-      1200000000 PUSHINT	//  _78 msg_value _79=1200000000
-      GREATER	//  _78 _80
+      1200000000 PUSHINT	//  _82 msg_value _83=1200000000
+      GREATER	//  _82 _84
       THROWANYIFNOT
-      LTIME	//  _83
-      0x47657424 PUSHINT	//  _83 _84
-      0 PUSHINT	//  _83 _84 _85=0
-      elector_address INLINECALLDICT	//  _83 _84 _85=0 _86
-      16 PUSHINT	//  _83 _84 _85=0 _86 _87=16
-      NEWC	//  _83 _84 _85=0 _86 _87=16 _88
-      6 STU	//  _83 _84 _85=0 _86 _90
-      STB	//  _83 _84 _85=0 _91
-      1000000000 PUSHINT	//  _83 _84 _85=0 _91 _92=1000000000
-      STVARUINT16	//  _83 _84 _85=0 _93
-      107 STU	//  _83 _84 _107
-      32 STU	//  _83 _109
-      64 STU	//  _111
+      LTIME	//  _87
+      0x47657424 PUSHINT	//  _87 _88
+      0 PUSHINT	//  _87 _88 _89=0
+      elector_address INLINECALLDICT	//  _87 _88 _89=0 _90
+      16 PUSHINT	//  _87 _88 _89=0 _90 _91=16
+      NEWC	//  _87 _88 _89=0 _90 _91=16 _92
+      6 STU	//  _87 _88 _89=0 _90 _94
+      STB	//  _87 _88 _89=0 _95
+      1000000000 PUSHINT	//  _87 _88 _89=0 _95 _96=1000000000
+      STVARUINT16	//  _87 _88 _89=0 _97
+      107 STU	//  _87 _88 _111
+      32 STU	//  _87 _113
+      64 STU	//  _115
       ENDC	//  msg
-      3 PUSHINT	//  msg _113=3
+      3 PUSHINT	//  msg _117=3
       SENDRAWMSG
     }>	//  storage msg_value
     2DROP	// 
-    406 PUSHINT	//  _115
+    406 PUSHINT	//  _119
     THROWANY
   }>
   recv_internal PROC:<{

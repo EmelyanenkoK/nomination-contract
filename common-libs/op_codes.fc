@@ -22,3 +22,5 @@ int op::minter::distribute() asm "0 PUSHINT"; ;;TODO
 
 int op::jetton::master_request() asm "0 PUSHINT"; ;;TODO
 int op::jetton::burn_notification() asm "18 PUSHINT"; ;;TODO
+
+int workchain() asm "0 PUSHINT";

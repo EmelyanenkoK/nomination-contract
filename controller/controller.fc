@@ -51,6 +51,20 @@
   return (balances,());
 }
 
+() notify_nominator (int nom_total_diff, int nom_total, storage) impure {
+      var msg = begin_cell()
+                  .store_uint(0x10, 6)
+                  .store_slice(storage.t4_second().triple_first())
+                  .store_coins(100000000)
+                  .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                  .store_uint(op::nominator::notify(), 32)
+                  .store_uint(cur_lt(), 64)
+                  .store_int(nom_total_diff, 64)
+                  .store_coins(nom_total)
+                .end_cell();
+      send_raw_message(msg, 3);
+}
+
 () process_elector_response(in_msg, msg_value, storage) impure {
   int op = in_msg~load_uint(32);
   if( (op == op::elector::response::stake::not_accepted()) | 
@@ -74,20 +88,11 @@
       }
     }
     balances = tuple4( nom_total, 0, nom_withdrawal, 0);
-    if(nom_total & ~(nom_total == initial_nom_total)) {
-      var msg = begin_cell()
-                  .store_uint(0x10, 6)
-                  .store_slice(storage.t4_second().triple_first())
-                  .store_coins(100000000)
-                  .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-                  .store_uint(op::nominator::notify(), 32)
-                  .store_uint(cur_lt(), 64)
-                  .store_int(nom_total - initial_nom_total, 64)
-                  .store_coins(nom_total)
-                .end_cell();
-      send_raw_message(msg, 3);
-    }
     balances~consider_request(static_data.triple_first());
+    if(nom_total) {
+      ;; note: we notify about nom_total prior the withdrawal
+      notify_nominator(nom_total - initial_nom_total, nom_total, storage);
+    }
     ;; drop last_sent_stake_time: thus we can immediately send next stake
     return save_data(wallet_data, static_data, balances, 0);
   }
@@ -105,7 +110,10 @@
     send_receipt_message(static_data.triple_first(),
                          op::nominator::add_stake() | 0x80000000,
                          in_msg~load_uint(64),
-                         nom_total, 128, 100000000, 0);
+                         0, 0, 100000000, 0);
+    ifnot(total_stake) { ;; if tokens are not staked, immediate notify nominator about current total balance
+      notify_nominator(0, nom_total, storage);
+    }
     return save_data(wallet_data, static_data, balances, last_sent_stake_time);
   }
   if(op == op::nominator::withdraw()) {
@@ -120,6 +128,8 @@
                          0, 0, 0, 64);
     ifnot(total_stake) { ;; if tokens are not staked, consider immediately but in different message
       balances~consider_request(static_data.triple_first());
+      ;; note notified nom_total is the number prior to balances withdrawing
+      notify_nominator(0, nom_total, storage);
     }
     return save_data(wallet_data, static_data, balances, last_sent_stake_time);
   }

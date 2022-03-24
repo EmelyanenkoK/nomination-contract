@@ -176,12 +176,14 @@ PROGRAM{
       s0 s2 XCHG
       2 PUSHINT	//  stored_subwallet stored_seqno public_key owner cs msg mode _50=2
       OR	//  stored_subwallet stored_seqno public_key owner cs msg _51
+      195 PUSHINT	//  stored_subwallet stored_seqno public_key owner cs msg _51 _52=195
+      AND	//  stored_subwallet stored_seqno public_key owner cs msg _53
       SENDRAWMSG
     }>	//  stored_subwallet stored_seqno public_key owner cs
     DROP	//  stored_subwallet stored_seqno public_key owner
     s0 s2 XCHG	//  stored_subwallet owner public_key stored_seqno
-    INC	//  stored_subwallet owner public_key _54
-    s3 s1 s3 XCHG3	//  _54 stored_subwallet public_key owner
+    INC	//  stored_subwallet owner public_key _56
+    s3 s1 s3 XCHG3	//  _56 stored_subwallet public_key owner
     save_data CALLDICT
     ACCEPT
   }>

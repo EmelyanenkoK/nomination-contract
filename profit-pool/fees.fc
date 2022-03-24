@@ -2,3 +2,4 @@ int profit_pool::minting_fees() asm "0 PUSHINT"; ;;TODO
 int profit_pool::minter_storage_fee() asm "0 PUSHINT"; ;;TODO
 int profit_pool::deposit_fee() asm "0 PUSHINT"; ;;TODO
 int profit_pool::withdrawal_fee() asm "0 PUSHINT"; ;;TODO
+int profit_pool::basic_processing_fee() asm "0 PUSHINT"; ;;TODO
