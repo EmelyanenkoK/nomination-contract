@@ -1,0 +1,20 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"GetOpt.fif" include
+
+variable extra-currencies
+{ extra-currencies @ cc+ extra-currencies ! } : extra-cc+!
+
+
+{ ."usage: " $0 type ." [<savefile>]" cr
+  ."Creates a refund request from controller to elector" cr 1 halt
+} : usage
+$# 1- -2 and ' usage if
+
+1 :$1..n
+$1 "request-stake-query" replace-if-null =: savefile
+
+<b 0x47657424 32 u, b>
+2 boc+>B
+savefile +".boc" tuck B>file
+."(Saved to file " type .")" cr
